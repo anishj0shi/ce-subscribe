@@ -1,2 +1,2 @@
-# ce-subscribe
+# ce-subscriber
 Sample Cloud Event Subscriber
