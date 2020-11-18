@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ce-subscriber-deployment
+spec:
+  selector:
+    matchLabels:
+      app: ce-subscriber
+  template:
+    metadata:
+      labels:
+        app: ce-subscriber
+    spec:
+      containers:
+      - name: ce-subscriber
+        image: ko://github.com/anishj0shi/ce-subscriber/cmd/ce-subscriber
+        env:
+          - name: INMEMORY_DB_SERVICE_URL
+            value: http://inmemorydb-service.aj-test:8080/eventResult
+        resources:
+          requests:
+            memory: 128Mi
+            cpu: 200m
+        ports:
+        - containerPort: 8081
