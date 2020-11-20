@@ -3,14 +3,16 @@ package client
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"github.com/anishj0shi/ce-subscriber/pkg/api"
+	v2 "github.com/cloudevents/sdk-go/v2"
+	"golang.org/x/exp/rand"
+	"log"
 	"net/http"
 	"time"
 )
 
 type InMemoryDBServiceClient interface {
-	SendEventLatency(object api.InMemoryDataObject) error
+	SendEventLatency(signal chan<- bool, event v2.Event)
 }
 
 func NewInMemoryDBServiceClient(inmemorydbServiceUrl string) InMemoryDBServiceClient {
@@ -28,21 +30,41 @@ type inMemoryDBServiceClient struct {
 	url    string
 }
 
-func (i inMemoryDBServiceClient) SendEventLatency(object api.InMemoryDataObject) error {
-	b, err := json.Marshal(object)
+func (i inMemoryDBServiceClient) SendEventLatency(signal chan<- bool, event v2.Event) {
+	currentTime := time.Now().UTC()
+	log.Printf("Timestamp: %d, Received event...%v", currentTime, event)
+
+	eventData := &api.EventData{}
+	err := event.DataAs(eventData)
 	if err != nil {
-		return err
+		log.Print("unable to deserialise data object")
+	}
+	eventTimeStamp := time.Unix(0, eventData.Timestamp)
+	e2eLatency := getLatencyDifference(currentTime, eventTimeStamp)
+	obj := api.InMemoryDataObject{
+		ID:         rand.Int(),
+		EventId:    event.ID(),
+		E2ELatency: e2eLatency,
+		EventType:  event.Type(),
+	}
+	b, err := json.Marshal(obj)
+	if err != nil {
+		log.Print(err)
 	}
 	req, err := http.NewRequest(http.MethodPost, i.url, bytes.NewBuffer(b))
 	if err != nil {
-		return err
+		log.Print(err)
 	}
 	res, err := i.client.Do(req)
 	if err != nil {
-		return err
+		log.Print(err)
 	}
 	if res.StatusCode != http.StatusCreated {
-		return errors.New("Entry not added")
+		log.Print("Entry not added")
 	}
-	return nil
+	signal <- true
+}
+
+func getLatencyDifference(now, timestamp time.Time) int64 {
+	return now.Sub(timestamp).Milliseconds()
 }

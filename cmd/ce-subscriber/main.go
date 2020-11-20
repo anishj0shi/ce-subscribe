@@ -2,15 +2,12 @@ package main
 
 import (
 	"context"
-	"github.com/anishj0shi/ce-subscriber/pkg/api"
 	"github.com/anishj0shi/ce-subscriber/pkg/client"
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/event"
-	"golang.org/x/exp/rand"
 	"log"
 	"net/http"
 	"os"
-	"time"
 )
 
 const (
@@ -21,6 +18,7 @@ var inMemoryDBServiceURL string
 var dbClient client.InMemoryDBServiceClient
 
 func main() {
+	log.Println("Starting event Receiver...")
 	inMemoryDBServiceURL = os.Getenv(INMEMORY_DB_SERVICE_URL_KEY)
 	if inMemoryDBServiceURL == "" {
 		panic("No Reference to InMemoryDBService. " +
@@ -43,26 +41,8 @@ func main() {
 }
 
 func receiveFn(ctx context.Context, event event.Event) {
-	log.Printf("Received event...")
-	eventData := &api.EventData{}
-	err := event.DataAs(eventData)
-	if err != nil {
-		log.Print("unable to deserialise data object")
-	}
-	e2eLatency := getLatencyDifference(time.Now().Unix(), eventData.Timestamp)
-	obj := api.InMemoryDataObject{
-		ID:         rand.Int(),
-		EventId:    event.ID(),
-		E2ELatency: e2eLatency,
-		EventType:  event.Type(),
-	}
-
-	err = dbClient.SendEventLatency(obj)
-	if err != nil {
-		log.Print(err)
-	}
-}
-
-func getLatencyDifference(now, timestamp int64) int64 {
-	return now - timestamp
+	finishedSignal := make(chan bool)
+	log.Println("Executing goroutine")
+	go dbClient.SendEventLatency(finishedSignal, event)
+	<-finishedSignal
 }
