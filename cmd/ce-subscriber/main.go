@@ -41,8 +41,5 @@ func main() {
 }
 
 func receiveFn(ctx context.Context, event event.Event) {
-	finishedSignal := make(chan bool)
-	log.Println("Executing goroutine")
-	go dbClient.SendEventLatency(finishedSignal, event)
-	<-finishedSignal
+	dbClient.SendEventLatency(event)
 }

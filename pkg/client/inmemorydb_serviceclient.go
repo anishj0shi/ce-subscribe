@@ -12,7 +12,7 @@ import (
 )
 
 type InMemoryDBServiceClient interface {
-	SendEventLatency(signal chan<- bool, event v2.Event)
+	SendEventLatency(event v2.Event)
 }
 
 func NewInMemoryDBServiceClient(inmemorydbServiceUrl string) InMemoryDBServiceClient {
@@ -30,7 +30,7 @@ type inMemoryDBServiceClient struct {
 	url    string
 }
 
-func (i inMemoryDBServiceClient) SendEventLatency(signal chan<- bool, event v2.Event) {
+func (i inMemoryDBServiceClient) SendEventLatency(event v2.Event) {
 	currentTime := time.Now().UTC()
 	log.Printf("Timestamp: %d, Received event...%v", currentTime, event)
 
@@ -62,7 +62,7 @@ func (i inMemoryDBServiceClient) SendEventLatency(signal chan<- bool, event v2.E
 	if res.StatusCode != http.StatusCreated {
 		log.Print("Entry not added")
 	}
-	signal <- true
+
 }
 
 func getLatencyDifference(now, timestamp time.Time) int64 {
